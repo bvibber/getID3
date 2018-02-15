@@ -173,6 +173,12 @@ class getid3_mpeg extends getid3_handler
 							$info['video']['interlaced']            = !$info['mpeg']['video']['raw']['progressive_sequence'];
 							$info['mpeg']['video']['interlaced']    = !$info['mpeg']['video']['raw']['progressive_sequence'];
 							$info['mpeg']['video']['chroma_format'] = self::chromaFormatTextLookup($info['mpeg']['video']['raw']['chroma_format']);
+
+							// MPEG-2 uses a different mapping for aspect ratio.
+							$info['mpeg']['video']['pixel_aspect_ratio']      =     self::videoAspectRatioLookup2($info['mpeg']['video']['raw']['aspect_ratio_information'], $info['video']['resolution_x'], $info['video']['resolution_y']);
+							$info['mpeg']['video']['pixel_aspect_ratio_text'] = self::videoAspectRatioTextLookup2($info['mpeg']['video']['raw']['aspect_ratio_information']);
+							$info['video']['pixel_aspect_ratio'] = $info['mpeg']['video']['pixel_aspect_ratio'];
+
 							break;
 
 						case  2: // 0010 Sequence Display Extension ID
@@ -607,6 +613,36 @@ echo 'average_File_bitrate = '.number_format(array_sum($vbr_bitrates) / count($v
 	 */
 	public static function videoAspectRatioTextLookup($rawaspectratio) {
 		$lookup = array('forbidden', 'square pixels', '0.6735', '16:9, 625 line, PAL', '0.7615', '0.8055', '16:9, 525 line, NTSC', '0.8935', '4:3, 625 line, PAL, CCIR601', '0.9815', '1.0255', '1.0695', '4:3, 525 line, NTSC, CCIR601', '1.1575', '1.2015', 'reserved');
+		return (isset($lookup[$rawaspectratio]) ? $lookup[$rawaspectratio] : '');
+	}
+
+	/**
+	 * @param int $rawaspectratio
+	 * @param int $x
+	 * @param int $y
+	 *
+	 * @return float
+	 */
+	public static function videoAspectRatioLookup2($rawaspectratio, $x, $y) {
+		$lookup = array(0, 1, 4/3, 16/9, 2.21);
+		if ($rawaspectratio == 1) {
+			// Square pixels
+			return (float) 1;
+		} else if (isset($lookup[$rawaspectratio])) {
+			$displayaspect = (float) $lookup[$rawaspectratio];
+			return (float) (($y * $displayaspect) / $x);
+		} else {
+			return (float) 0;
+		}
+	}
+
+	/**
+	 * @param int $rawaspectratio
+	 *
+	 * @return string
+	 */
+	public static function videoAspectRatioTextLookup2($rawaspectratio) {
+		$lookup = array('forbidden', 'square pixels', '4:3', '16:9', '2.21');
 		return (isset($lookup[$rawaspectratio]) ? $lookup[$rawaspectratio] : '');
 	}
 
